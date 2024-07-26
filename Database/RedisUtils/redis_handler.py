@@ -213,11 +213,33 @@ class RedisHandler:
                 
         # 오류는 False 반환
         except Exception as e:
-            print(f"MongoDBHandler Select Error: {e}")
+            print(f"RedisHandler Update Error: {e}")
             return False        
         
         
     # Delete => delete
-    async def delete(self, filter:Dict={})->Union[int, bool]:
-    
+    async def delete(self, keys:Union[Union[str, ObjectId], List[str]])->Union[int, bool]:
+        try:
+            if(type(keys) is Union[str, ObjectId]):
+                result = await self.db_conn.delete(keys)
+                return result
+            else:
+                pipeline = self.db_conn.pipeline()
+                for key in keys:
+                    pipeline.delete(key)
+                result_list = await pipeline.execute()
+                
+                result = 0
+                for elem in result_list:
+                    result += elem
+                return result
+        
+        # 오류는 False 반환
+        except Exception as e:
+            print(f"RedisHandler Delete Error: {e}")
+            return False  
+                
+                
+            
+        
     
