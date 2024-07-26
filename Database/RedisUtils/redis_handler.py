@@ -85,12 +85,18 @@ class RedisHandler:
                     data_list = documents
                  
                 # 이미 존재하는 값인지 확인, 있으면 오류 발생   
+                pipeline = self.db_conn.pipeline()
                 for elem in data_list:
                     key = elem.get("_id")
-                    if(not self.db_conn.exists(key)):
-                        raise ValueError("Already Existing Value")
+                    pipeline.exists(key)
+                result = await pipeline.execute()
                 
-                pipeline = self.db_conn.pipeline()
+                check = True
+                for elem in result:
+                    check = check and elem
+                if(not check):    
+                    raise ValueError("Already Existing Value")
+                
                 for elem in data_list:
                     key = elem.pop("_id")
                     value = elem
@@ -166,10 +172,50 @@ class RedisHandler:
             return False
         
         
-    # update => update
+    # update => update // 이거 필드별로 삭제하는 기능도 만들어야함
     async def update(self, 
-                     filter:Dict={},
-                     update:Dict=None)->Union[int, bool]:
+                     keys:Union[Union[str, ObjectId], List[str]],
+                     update:Dict=None)-> bool:
+        try:
+            if(type(keys) is Union[str, ObjectId]):
+                if(self.db_conn.exists(keys)):
+                    result = await self.db_conn.hset(keys, mapping=update)
+                    if(result == 0):
+                        return True
+                    else:
+                        raise ValueError("Cannot find data from collection") 
+                else:
+                    raise ValueError("Cannot find data from collection") 
+            elif(type(keys) is list):
+                # 이미 존재하는 값인지 확인, 없으면 오류 발생   
+                pipeline = self.db_conn.pipeline()
+                for key in keys:
+                    pipeline.exists(key)
+                check_result = await pipeline.execute()
+                check = True
+                for elem in check_result:
+                    check = check and elem
+                if(not check):    
+                    raise ValueError("Already Existing Value")
+
+                for key in keys:
+                    pipeline.hset(key, mapping=update)
+                result = await pipeline.execute()
+                
+                check = False
+                for elem in result:
+                    check = check or bool(elem)
+                    
+                if(check):
+                    raise ValueError("Already Existing Value")
+                else:
+                    return True
+                
+        # 오류는 False 반환
+        except Exception as e:
+            print(f"MongoDBHandler Select Error: {e}")
+            return False        
+        
         
     # Delete => delete
     async def delete(self, filter:Dict={})->Union[int, bool]:
