@@ -17,7 +17,7 @@ class MongoDBHandler():
         return cls.instance
 
     # 컬렉션 연결용 init
-    def __init__(self, mongodb_settings:Settings=settings, coll_config:Optional[Dict[str,str]]=None)->None:
+    def __init__(self, mongodb_settings:Settings=settings, db_settings:Optional[Dict[str,str]]=None)->None:
         if(MongoDBHandler.db_conn is None):    
             host = mongodb_settings.MONGODB_HOST
             port = mongodb_settings.MONGODB_PORT
@@ -31,10 +31,10 @@ class MongoDBHandler():
                 
             MongoDBHandler.db_conn = AsyncIOMotorClient(url)
         
-        if(coll_config is not None):
-            db_name = coll_config.get("db_name", None)
-            coll_name = coll_config.get("coll_name", None)
-            db_schema = coll_config.get("db_schema", None)
+        if(db_settings is not None):
+            db_name = db_settings.get("db_name", None)
+            coll_name = db_settings.get("coll_name", None)
+            db_schema = db_settings.get("db_schema", None)
             
             if(db_name is None or coll_name is None or db_schema is None):
                 raise
