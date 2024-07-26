@@ -1,7 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Optional, Union, Dict, List
 from bson import ObjectId
-import asyncio
 
 from settings import settings, Settings
 
@@ -18,7 +17,7 @@ class MongoDBHandler():
         return cls.instance
 
     # 컬렉션 연결용 init
-    def __init__(self, mongodb_settings:Settings=settings, coll_config:Optional[dict]=None)->None:
+    def __init__(self, mongodb_settings:Settings=settings, coll_config:Optional[Dict[str,str]]=None)->None:
         if(MongoDBHandler.db_conn is None):    
             host = mongodb_settings.MONGODB_HOST
             port = mongodb_settings.MONGODB_PORT
@@ -33,11 +32,16 @@ class MongoDBHandler():
             MongoDBHandler.db_conn = AsyncIOMotorClient(url)
         
         if(coll_config is not None):
-            db_name = mongodb_settings.MONGODB_DB_NAME
-            coll_name = coll_config["coll_name"]
+            db_name = coll_config.get("db_name", None)
+            coll_name = coll_config.get("coll_name", None)
+            db_schema = coll_config.get("db_schema", None)
+            
+            if(db_name is None or coll_name is None or db_schema is None):
+                raise
 
             try:
                 self.db_coll = MongoDBHandler.db_conn[db_name][coll_name]
+                self.db_schema = db_schema
             except Exception as e:
                 print(f"MongoDBHandler Error: {e}")
     
@@ -51,11 +55,22 @@ class MongoDBHandler():
         try:
             # 하나의 객체만 삽입 -> ObjectId 반환
             if(type(documents) is dict):
-                result = await self.db_coll.insert_one(documents)
+                # 유효성 검사, 안되면 오류
+                temp_data = self.db_schema(**documents)
+                data = temp_data.dict(by_alias=True)
+                
+                result = await self.db_coll.insert_one(data)
                 return result.inserted_id
             # 여러 객체 삽입 -> ObjectId 배열 반환
             elif(type(documents) is list):
-                result = await self.db_coll.insert_many
+                # 유효성 검사, 안되면 오류
+                data_list = []
+                for elem in documents:
+                    temp_data = self.db_schema(**elem)
+                    data = temp_data.dict(by_alias=True)
+                    data_list.append(data)
+                
+                result = await self.db_coll.insert_many(data_list)
                 result_list = [id for id in result.values()]
                 return result_list
         # 오류는 False 반환

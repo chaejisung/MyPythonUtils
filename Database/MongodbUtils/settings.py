@@ -10,6 +10,5 @@ class Settings(BaseSettings):
     MONGODB_PORT: int
     MONGODB_USER: Optional[str] = None
     MONGODB_PASSWORD: Optional[str] = None
-    MONGODB_DB_NAME: Optional[str] = None
     
 settings = Settings()
