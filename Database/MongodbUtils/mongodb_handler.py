@@ -87,7 +87,7 @@ class MongoDBHandler:
     # Read => select
     async def select(self, 
                      filter:Dict={},
-                     projection:Optional[Dict[str, str]]=None)->Union[Dict, List[Dict], bool]:
+                     projection:Optional[Dict[str, int]]=None)->Union[Dict, List[Dict], bool]:
         try:
             # _id 기준으로 검색 시 1개 반환, dict
             if(filter.get("_id", None) is not None):
